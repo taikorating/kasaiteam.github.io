@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>第2回†††Darkness Kasai cup††† チーム戦</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #0d0d12;
+            --panel-bg: #1a1a24;
+            --team-a-color: #3498db; /* 愛機代行代行 カラー (青系) */
+            --team-b-color: #e74c3c; /* 団結力 カラー (赤系) */
+            --accent: #9b59b6;
+            --text-main: #e0e0e0;
+            --border-color: #333;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            color: var(--text-main);
+            font-family: 'Helvetica Neue', Arial, Meiryo, sans-serif;
+            margin: 0; padding: 15px;
+        }
+
+        h1 {
+            text-align: center; color: #fff; font-size: 1.8em; margin-bottom: 20px;
+            text-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent);
+            letter-spacing: 1px;
+        }
+
+        /* 💾 コントロールパネル */
+        .controls {
+            display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap;
+            margin-bottom: 20px; background: rgba(0,0,0,0.5); padding: 15px; border-radius: 8px; border: 1px solid #444;
+            max-width: 800px; margin-left: auto; margin-right: auto;
+        }
+        .ctrl-btn {
+            background-color: #333; color: #fff; border: 1px solid #666; padding: 8px 12px; font-size: 13px;
+            cursor: pointer; border-radius: 4px; font-weight: bold; transition: 0.2s;
+        }
+        .ctrl-btn:hover { background-color: var(--accent); border-color: #fff; }
+        .ctrl-btn.btn-img { background-color: #2196F3; border-color: #2196F3; }
+        .ctrl-btn.btn-img:hover { filter: brightness(1.2); }
+        .import-box { display: flex; flex-direction: column; font-size: 12px; color: #aaa; }
+        .import-box input[type="file"] { margin-top: 5px; font-size: 11px; }
+
+        #capture-area {
+            padding: 20px 10px; border-radius: 10px; margin: 0 auto; max-width: 850px;
+            background-color: var(--bg-color);
+            background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+
+        /* スコアボード */
+        .scoreboard {
+            display: flex; justify-content: center; align-items: center; gap: 15px;
+            margin-bottom: 20px; background: rgba(0,0,0,0.8); padding: 15px;
+            border-radius: 10px; border: 1px solid var(--border-color);
+            max-width: 600px; margin-left: auto; margin-right: auto;
+        }
+        .team-score { text-align: center; font-size: 20px; font-weight: bold; flex: 1; }
+        .team-a-text { color: var(--team-a-color); text-shadow: 0 0 10px var(--team-a-color); }
+        .team-b-text { color: var(--team-b-color); text-shadow: 0 0 10px var(--team-b-color); }
+        .score-number { font-size: 40px; display: block; margin-top: 5px; color: #fff; text-shadow: none;}
+        .vs-text { font-size: 18px; font-weight: bold; color: #777; font-style: italic; }
+
+        /* 📊 勢力図ゲージ */
+        .power-gauge-wrapper {
+            max-width: 600px; margin: 0 auto 25px auto; text-align: center;
+        }
+        .power-gauge-title {
+            font-size: 13px; color: #aaa; margin-bottom: 8px; font-weight: bold; letter-spacing: 2px;
+        }
+        .power-gauge {
+            display: flex; height: 32px; background: #222; border-radius: 8px; overflow: hidden;
+            border: 2px solid #555; position: relative; box-shadow: 0 4px 10px rgba(0,0,0,0.6);
+        }
+        .gauge-bar {
+            height: 100%; transition: width 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.5s;
+        }
+        .gauge-bar.team-a { 
+            background: linear-gradient(90deg, #1f618d, var(--team-a-color)); 
+            box-shadow: inset -2px 0 10px rgba(0,0,0,0.3), 0 0 15px var(--team-a-color); 
+        }
+        .gauge-bar.team-b { 
+            background: linear-gradient(-90deg, #922b21, var(--team-b-color)); 
+            box-shadow: inset 2px 0 10px rgba(0,0,0,0.3), 0 0 15px var(--team-b-color); 
+        }
+        .gauge-center-line {
+            position: absolute; left: 50%; top: 0; width: 2px; height: 100%;
+            background: rgba(255,255,255,0.4); transform: translateX(-50%); z-index: 10;
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+        }
+
+        /* 試合リスト */
+        .match-grid {
+            display: flex; flex-direction: column; gap: 12px; max-width: 800px; margin: 0 auto;
+        }
+        .match-card {
+            background: var(--panel-bg); border-left: 5px solid #555; border-radius: 6px;
+            padding: 12px 15px; display: flex; align-items: center; justify-content: space-between;
+            transition: 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.5); border-right: 1px solid #222; border-top: 1px solid #222; border-bottom: 1px solid #222;
+        }
+        .match-card.locked { opacity: 0.5; cursor: not-allowed; }
+        .match-card.ready { border-left-color: #f1c40f; cursor: pointer; background: #222211; }
+        .match-card.ready:hover { transform: translateX(3px); background: #333311; }
+        .match-card.completed { border-left-color: #2ecc71; }
+
+        .match-info { flex: 1; }
+        .match-title { font-size: 13px; color: #aaa; margin-bottom: 4px; font-weight: bold; }
+        .match-details { font-size: 15px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .match-btn { background: #f1c40f; color: #000; border: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px; }
+        .match-card.completed .match-btn { display: none; }
+
+        /* モーダル系 */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-content { background: var(--panel-bg); border-radius: 8px; padding: 20px; width: 95%; max-width: 550px; border: 1px solid var(--border-color); box-shadow: 0 0 30px rgba(0,0,0,0.8); max-height: 90vh; overflow-y: auto; box-sizing: border-box; }
+        .modal-header { font-size: 18px; font-weight: bold; border-bottom: 1px solid #444; padding-bottom: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;}
+        .close-btn { cursor: pointer; color: #aaa; font-size: 24px; line-height: 1;}
+        .close-btn:hover { color: #fff; }
+
+        .control-group { margin-bottom: 15px; }
+        .control-group label { display: block; margin-bottom: 6px; font-size: 13px; color: #aaa; }
+        select, input[type="number"] { width: 100%; padding: 8px; background: #111; color: #fff; border: 1px solid #555; border-radius: 4px; font-size: 15px; box-sizing: border-box; }
+        select:focus, input:focus { border-color: var(--accent); outline: none; }
+
+        .selector-alert { padding: 10px; background: rgba(241, 196, 15, 0.1); border: 1px solid #f1c40f; color: #f1c40f; border-radius: 4px; margin-bottom: 15px; font-weight: bold; text-align: center; font-size: 14px; }
+        
+        .btn-cointoss { background: #fff; color: #000; border: 2px solid #ccc; padding: 12px; width: 100%; font-size: 15px; font-weight: bold; border-radius: 4px; cursor: pointer; }
+        
+        /* ボタン */
+        .btn-group { display: flex; justify-content: center; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
+        .btn-action { background: var(--accent); color: #fff; border: none; padding: 10px 20px; font-size: 14px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: 0.2s; flex: 1; min-width: 120px; text-align: center; }
+        .btn-action:hover { filter: brightness(1.2); }
+        .btn-back { background: #555; flex: 0 1 auto; min-width: 80px; }
+
+        /* スコア入力 */
+        .score-input-container { display: flex; gap: 10px; margin-bottom: 15px; }
+        .score-box { flex: 1; background: #222; padding: 12px; border-radius: 6px; text-align: center; box-sizing: border-box; }
+        .score-box.team-a { border-top: 4px solid var(--team-a-color); }
+        .score-box.team-b { border-top: 4px solid var(--team-b-color); }
+        .player-name-display { font-size: 15px; font-weight: bold; margin-bottom: 12px; display: block; word-break: break-all; line-height: 1.2; height: 36px; }
+        .input-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .input-row span { font-size: 13px; color: #ccc; }
+        .input-row input { width: 50px; text-align: center; padding: 5px; font-size: 16px; }
+        .song-display { text-align: center; font-size: 16px; color: #f1c40f; margin-bottom: 15px; font-weight: bold; background: #111; padding: 8px; border-radius: 4px; }
+
+        /* 🏆 派手な結果発表 */
+        #match-result-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.92); z-index: 3000; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; }
+        .winner-announce-text { font-size: 50px; font-weight: 900; padding: 10px 20px; border-radius: 12px; text-align: center; line-height: 1.2; transform: scale(0); margin: 10px 0; }
+        .winner-a { color: var(--team-a-color); text-shadow: 0 0 30px var(--team-a-color), 0 0 10px #fff; background: rgba(52, 152, 219, 0.15); border: 2px solid var(--team-a-color); }
+        .winner-b { color: var(--team-b-color); text-shadow: 0 0 30px var(--team-b-color), 0 0 10px #fff; background: rgba(231, 76, 60, 0.15); border: 2px solid var(--team-b-color); }
+        @keyframes resultZoom { 0% { transform: scale(0) rotate(-5deg); opacity: 0; } 100% { transform: scale(1) rotate(0deg); opacity: 1; } }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+        /* スマホ用メディアクエリ */
+        @media (max-width: 600px) {
+            h1 { font-size: 1.4em; }
+            .controls { flex-direction: column; align-items: stretch; padding: 10px; }
+            .ctrl-btn { text-align: center; padding: 12px; }
+            .scoreboard { padding: 10px; gap: 10px; flex-wrap: wrap; }
+            .team-score { font-size: 14px; }
+            .score-number { font-size: 32px; }
+            .vs-text { font-size: 14px; }
+            .power-gauge-wrapper { padding: 0 10px; }
+            .match-card { flex-direction: column; align-items: flex-start; padding: 10px; }
+            .match-info { width: 100%; margin-bottom: 8px; }
+            .match-btn { width: 100%; text-align: center; padding: 10px; font-size: 14px; }
+            .modal-content { padding: 15px; }
+            .score-input-container { flex-direction: column; gap: 15px; }
+            .player-name-display { height: auto; }
+            .flex-mobile-col { display: flex; flex-direction: column; gap: 10px; }
+            .flex-mobile-col > div { width: 100%; }
+            .btn-action { padding: 12px; font-size: 15px; }
+            .winner-announce-text { font-size: 35px; }
+            #result-match-title { font-size: 20px !important; }
+            #result-next-selector { font-size: 14px !important; }
+        }
+        @media (min-width: 601px) {
+            .flex-mobile-col { display: flex; flex-direction: row; gap: 15px; }
+            .flex-mobile-col > div { flex: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>††† Darkness Kasai cup †††<br><span style="font-size: 0.5em; color: #aaa;">チーム戦部門 シミュレーター</span></h1>
+
+    <div class="controls">
+        <button class="ctrl-btn btn-img" onclick="downloadPng()">📸 現在の状況を画像保存</button>
+        <span style="color: #666; margin: 0 5px;">|</span>
+        <button class="ctrl-btn" onclick="exportData()">💾 進行状況をtxt保存</button>
+        <div class="import-box">
+            <label for="import-file">📂 txtから復元:</label>
+            <input type="file" id="import-file" accept=".txt" onchange="importData(this)">
+        </div>
+    </div>
+
+    <div id="capture-area">
+        <div class="scoreboard">
+            <div class="team-score team-a-text">
+                愛機代行代行
+                <span class="score-number" id="score-a">0</span>
+            </div>
+            <div class="vs-text">WINS</div>
+            <div class="team-score team-b-text">
+                団結力
+                <span class="score-number" id="score-b">0</span>
+            </div>
+        </div>
+
+        <div class="power-gauge-wrapper">
+            <div class="power-gauge-title">🔥 チーム勢力図 🔥</div>
+            <div class="power-gauge">
+                <div class="gauge-center-line"></div>
+                <div id="gauge-a" class="gauge-bar team-a" style="width: 50%; opacity: 0.3;"></div>
+                <div id="gauge-b" class="gauge-bar team-b" style="width: 50%; opacity: 0.3;"></div>
+            </div>
+        </div>
+
+        <div class="match-grid" id="match-grid"></div>
+    </div>
+
+    <div class="modal-overlay" id="match-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span id="modal-title">第X試合</span>
+                <span class="close-btn" onclick="closeModal()">&times;</span>
+            </div>
+
+            <div id="phase1">
+                <div id="cointoss-area" style="display: none;">
+                    <p style="text-align: center; margin-bottom: 15px; font-size: 14px; color: #ccc;">最初の試合です。<br>第1試合の選曲権（先攻）を決めてください。</p>
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <button class="btn-cointoss" onclick="doCoinToss()">🪙 コイントスでランダムに決める</button>
+                        <div style="text-align: center; font-size: 12px; color: #888;">または手動で選択</div>
+                        <div class="flex-mobile-col" style="gap: 10px;">
+                            <button class="btn-action" style="background: var(--team-a-color); margin: 0;" onclick="setFirstSelector('A')">🟦 愛機代行代行 が先攻</button>
+                            <button class="btn-action" style="background: var(--team-b-color); margin: 0;" onclick="setFirstSelector('B')">🟥 団結力 が先攻</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="selection-area" style="display: none;">
+                    <div class="selector-alert" id="selector-alert"></div>
+                    <div class="control-group">
+                        <label>🎵 課題曲 (選曲権のあるチームが指定)</label>
+                        <select id="select-song"><option value="">曲を選択してください...</option></select>
+                    </div>
+                    <div class="flex-mobile-col" style="margin-bottom:20px;">
+                        <div>
+                            <label class="team-a-text">🟦 愛機代行代行 選手</label>
+                            <select id="select-player-a"><option value="">選手を選択...</option></select>
+                        </div>
+                        <div>
+                            <label class="team-b-text">🟥 団結力 選手</label>
+                            <select id="select-player-b"><option value="">選手を選択...</option></select>
+                        </div>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn-action" onclick="goToPhase2()">選手と曲を確定してスコア入力へ ➡️</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="phase2" style="display: none;">
+                <div class="song-display" id="display-song">🎵 ---</div>
+                <div class="score-input-container">
+                    <div class="score-box team-a">
+                        <span class="player-name-display team-a-text" id="display-player-a">Player A</span>
+                        <div class="input-row"><span>可 (-1)</span><input type="number" id="input-ka-a" min="0" value="0"></div>
+                        <div class="input-row"><span>不可 (-2)</span><input type="number" id="input-fuka-a" min="0" value="0"></div>
+                    </div>
+                    <div class="score-box team-b">
+                        <span class="player-name-display team-b-text" id="display-player-b">Player B</span>
+                        <div class="input-row"><span>可 (-1)</span><input type="number" id="input-ka-b" min="0" value="0"></div>
+                        <div class="input-row"><span>不可 (-2)</span><input type="number" id="input-fuka-b" min="0" value="0"></div>
+                    </div>
+                </div>
+                <div class="btn-group">
+                    <button class="btn-action btn-back" onclick="backToPhase1()">⬅️ 戻る</button>
+                    <button class="btn-action" onclick="confirmMatch()">💥 確定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="custom-confirm-overlay" class="modal-overlay" style="z-index: 2000;">
+        <div class="modal-content" style="text-align: center; max-width: 350px; padding: 25px 20px;">
+            <h3 style="margin-top:0; font-size: 16px;">この試合結果で確定してよろしいですか？</h3>
+            <div class="btn-group" style="margin-top: 20px;">
+                <button class="btn-action btn-back" onclick="closeCustomConfirm()">キャンセル</button>
+                <button class="btn-action" onclick="executeMatchResult()" style="background: #e74c3c;">確定する</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="custom-alert-overlay" class="modal-overlay" style="z-index: 2000;">
+        <div class="modal-content" style="text-align: center; max-width: 350px; padding: 25px 20px;">
+            <h3 id="custom-alert-msg" style="margin-top:0; font-size: 16px; color: #f1c40f;"></h3>
+            <div class="btn-group" style="margin-top: 20px;">
+                <button class="btn-action" onclick="closeCustomAlert()">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="match-result-overlay" onclick="closeMatchResult()">
+        <div id="result-match-title" style="color:#aaa; font-size:26px; font-weight:bold; margin-bottom:10px; text-shadow:0 0 10px #000;">第X試合 終了</div>
+        <div style="font-size:35px; color:#f1c40f; font-weight:900; margin-bottom:15px; font-style:italic;">WINNER</div>
+        <div class="winner-announce-text" id="result-winner-name">チーム〇〇</div>
+        <div id="result-next-selector" style="margin-top:30px; font-size:16px; color:#ddd; background:rgba(255,255,255,0.1); padding:10px 20px; border-radius:30px; border:1px solid #555;"></div>
+        <div style="margin-top: 40px; font-size: 14px; color: #777; animation: blink 1s infinite;">画面をタップして次へ進む</div>
+    </div>
+
+<script>
+// --- データ定義 ---
+const teamA_name = "愛機代行代行";
+const teamB_name = "団結力";
+const teamA_players = ["きたあいき選手", "おにしともき選手", "をわん選手", "いけじま選手", "いまい選手", "ふくざき選手", "モォーブ選手"];
+const teamB_players = ["はんだりゅうたろう選手", "田中りょうま選手", "こばやしひろき選手", "にしだ選手", "にしはら選手", "しみず選手", "こころさん選手"];
+const songsList = ["重金属(火災枠)", "そして勇者は眠りにつく裏(今井枠)", "プレリュード裏(西原枠)", "ミュージックリボルバー裏(池島枠)", "ポセイドン(上平枠)", "オリオンをなぞる(きたあいき枠)", "Rough: CHA0Z(おにし枠)", "極圏(ますい枠)", "VIVIVID(西田枠)", "エクストリームエンド裏(志水枠)", "アイドルライフスターターパック裏(田中りょうま枠)", "ダンバダンバディンダン(吉田ゆづき枠)", "アンリミテッドゲームズ裏(吉田ひかる枠)", "カナデア(福崎枠)", "EDY(アルティン枠)", "Emma裏(あみのモモカ枠)", "さくらんぼ(杉山かずき枠)", "デッドオアダイ(はんだりゅうたろう枠)", "てんびん座急行夜を行く(せやな枠)", "閃光天舞(こころさん枠)", "ゆらめ(ひびきんさん枠)", "ラブイクサ裏(かんじ枠)", "ゴールドフィッシュシティ(まっち枠)", "マツケンサンバ(けんさん枠)", "スーハー2000(をワン枠)", "束ね糸(夜風枠)", "サクラシークレット(かわのなつき枠)", "ゼルダの伝説 ブレス オブ ザ ワイルド メドレー(ぜる枠)", "電子ドラムの達人(なぴ枠)", "人のお金で焼肉を食したい裏(相川枠)", "ヤマタイナイトパーティー(やまちゃん枠)", "青と夏(あおぜみや枠)", "平等院鳳凰ドンvs鳥獣戯カ裏(ティーマ枠)", "パープルローズフュージョン(ふぁみ枠)", "黒神クロニクル(しろいぞ！枠)", "ハードコアの心得(とびさん枠)", "螺旋周回軌道表(たるさん枠)"];
+
+// --- 状態管理 ---
+let currentSelectorTeam = null; 
+let currentActiveMatchId = null;
+let matches = [];
+
+function initMatches() {
+    for(let i=1; i<=7; i++) {
+        matches.push({
+            id: i, playerA: null, playerB: null, song: null, selectorTeam: null,
+            scoreA: { ka: 0, fuka: 0, loss: 0 }, scoreB: { ka: 0, fuka: 0, loss: 0 },
+            winner: null, isCompleted: false
+        });
+    }
+}
+initMatches(); renderDashboard(); populateSongSelect();
+
+// --- セーブ・ロード・画像出力機能 ---
+function downloadPng() {
+    const targetElement = document.getElementById('capture-area');
+    html2canvas(targetElement, { backgroundColor: "#0d0d12", scale: 2 }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = 'TeamBattle_Status.png';
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+    }).catch(err => { 
+        showCustomAlert("画像の生成に失敗しました。"); 
+        console.error(err); 
+    });
+}
+
+function exportData() {
+    const saveData = { matches: matches, currentSelectorTeam: currentSelectorTeam };
+    const blob = new Blob([JSON.stringify(saveData, null, 2)], { type: "text/plain;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "team_battle_data.txt";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+function importData(input) {
+    const file = input.files[0]; if (!file) return; 
+    const reader = new FileReader();
+    reader.onload = function(e) { 
+        try { 
+            const data = JSON.parse(e.target.result); 
+            if(data.matches !== undefined) {
+                matches = data.matches; currentSelectorTeam = data.currentSelectorTeam;
+            } else {
+                matches = data;
+            }
+            renderDashboard(true); 
+            showCustomAlert("データを復元しました！"); 
+        } catch (err) { 
+            showCustomAlert("読み込みに失敗しました。ファイルが正しくありません。"); 
+        } 
+    };
+    reader.readAsText(file); input.value = "";
+}
+
+// --- UI制御 ---
+function showCustomAlert(msg) {
+    document.getElementById('custom-alert-msg').innerText = msg;
+    document.getElementById('custom-alert-overlay').style.display = 'flex';
+}
+function closeCustomAlert() { document.getElementById('custom-alert-overlay').style.display = 'none'; }
+function closeCustomConfirm() { document.getElementById('custom-confirm-overlay').style.display = 'none'; }
+
+function renderDashboard(isLoad = false) {
+    const grid = document.getElementById('match-grid'); grid.innerHTML = '';
+    let winsA = 0; let winsB = 0; let nextReadyId = 1;
+
+    matches.forEach(m => {
+        if(m.isCompleted) { if(m.winner === 'A') winsA++; if(m.winner === 'B') winsB++; nextReadyId = m.id + 1; }
+    });
+
+    document.getElementById('score-a').innerText = winsA; document.getElementById('score-b').innerText = winsB;
+
+    // 📊 勢力図ゲージの更新
+    const gaugeA = document.getElementById('gauge-a');
+    const gaugeB = document.getElementById('gauge-b');
+    let totalWins = winsA + winsB;
+
+    if (totalWins === 0) {
+        gaugeA.style.width = '50%';
+        gaugeB.style.width = '50%';
+        gaugeA.style.opacity = '0.3';
+        gaugeB.style.opacity = '0.3';
+    } else {
+        let percentA = (winsA / totalWins) * 100;
+        let percentB = (winsB / totalWins) * 100;
+        gaugeA.style.width = percentA + '%';
+        gaugeB.style.width = percentB + '%';
+        gaugeA.style.opacity = '1';
+        gaugeB.style.opacity = '1';
+    }
+
+    // 試合カードの生成
+    matches.forEach(m => {
+        const div = document.createElement('div'); div.className = 'match-card';
+        let statusHtml = ''; let buttonHtml = '';
+
+        if (m.isCompleted) {
+            div.classList.add('completed');
+            let winnerName = m.winner === 'A' ? teamA_name : teamB_name;
+            let winnerColorClass = m.winner === 'A' ? 'team-a-text' : 'team-b-text';
+            statusHtml = `
+                <div style="width: 100%;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:13px;">
+                        <span class="team-a-text">${m.playerA.substring(0,6)} (失:${m.scoreA.loss})</span>
+                        <span style="color:#666;">vs</span>
+                        <span class="team-b-text">${m.playerB.substring(0,6)} (失:${m.scoreB.loss})</span>
+                    </div>
+                    <div style="font-size:12px; color:#aaa; margin-bottom:5px;">🎵 ${m.song}</div>
+                    <div style="font-size:14px;">勝者: <strong class="${winnerColorClass}">${winnerName}</strong></div>
+                </div>`;
+        } else if (m.id === nextReadyId) {
+            div.classList.add('ready'); div.onclick = () => openModal(m.id);
+            statusHtml = `<span style="color:#aaa;">未実施</span>`;
+            buttonHtml = `<button class="match-btn">試合を始める</button>`;
+        } else {
+            div.classList.add('locked');
+            statusHtml = `<span style="color:#555;">前の試合が終わるまでロック中</span>`;
+        }
+
+        div.innerHTML = `<div class="match-info"><div class="match-title">第${m.id}試合</div><div class="match-details">${statusHtml}</div></div>${buttonHtml}`;
+        grid.appendChild(div);
+    });
+
+    if(nextReadyId > 7 && !isLoad) {
+        setTimeout(() => {
+            let overallWinner = winsA > winsB ? teamA_name : teamB_name;
+            confetti({ particleCount: 300, spread: 360, origin: { y: 0.5 }, zIndex: 5000 });
+            showCustomAlert(`🎉 全7試合 終了！\n\n最終結果は [ ${winsA} - ${winsB} ] で\n【 ${overallWinner} 】の優勝です！`);
+        }, 1000);
+    }
+}
+
+function populateSongSelect() {
+    const sel = document.getElementById('select-song'); 
+    sel.innerHTML = '<option value="">曲を選択してください...</option>';
+    
+    let usedSongsByTeam = [];
+    if (currentSelectorTeam) {
+        matches.forEach(m => {
+            if (m.isCompleted && m.selectorTeam === currentSelectorTeam) {
+                usedSongsByTeam.push(m.song);
+            }
+        });
+    }
+
+    songsList.forEach(song => { 
+        let opt = document.createElement('option'); 
+        opt.value = song; 
+        if (usedSongsByTeam.includes(song)) {
+            opt.disabled = true; opt.innerText = `❌ ${song} (選択済)`;
+            opt.style.background = "#222"; opt.style.color = "#777";
+        } else {
+            opt.innerText = song; 
+        }
+        sel.appendChild(opt); 
+    });
+}
+
+function updatePlayerSelects() {
+    let usedA = []; let usedB = [];
+    matches.forEach(m => { if(m.isCompleted) { usedA.push(m.playerA); usedB.push(m.playerB); } });
+
+    const selA = document.getElementById('select-player-a'); const selB = document.getElementById('select-player-b');
+    selA.innerHTML = '<option value="">選手を選択...</option>'; selB.innerHTML = '<option value="">選手を選択...</option>';
+
+    teamA_players.forEach(p => { if(!usedA.includes(p)) { let opt = document.createElement('option'); opt.value = p; opt.innerText = p; selA.appendChild(opt); } });
+    teamB_players.forEach(p => { if(!usedB.includes(p)) { let opt = document.createElement('option'); opt.value = p; opt.innerText = p; selB.appendChild(opt); } });
+}
+
+function openModal(matchId) {
+    currentActiveMatchId = matchId; document.getElementById('modal-title').innerText = `第${matchId}試合 設定`;
+    document.getElementById('select-song').value = ""; updatePlayerSelects();
+    document.getElementById('phase1').style.display = "block"; document.getElementById('phase2').style.display = "none";
+    document.getElementById('input-ka-a').value = 0; document.getElementById('input-fuka-a').value = 0;
+    document.getElementById('input-ka-b').value = 0; document.getElementById('input-fuka-b').value = 0;
+
+    if(matchId === 1 && currentSelectorTeam === null) {
+        document.getElementById('cointoss-area').style.display = "block"; document.getElementById('selection-area').style.display = "none";
+    } else {
+        document.getElementById('cointoss-area').style.display = "none"; document.getElementById('selection-area').style.display = "block"; 
+        populateSongSelect(); 
+        updateSelectorAlert();
+    }
+    document.getElementById('match-modal').style.display = "flex";
+}
+
+function closeModal() { document.getElementById('match-modal').style.display = "none"; }
+
+function doCoinToss() {
+    currentSelectorTeam = Math.random() < 0.5 ? 'A' : 'B';
+    let teamName = currentSelectorTeam === 'A' ? teamA_name : teamB_name;
+    showCustomAlert(`🪙 コイントスの結果...\n\n最初の選曲権は\n【 ${teamName} 】\nに決定しました！`);
+    document.getElementById('cointoss-area').style.display = "none"; document.getElementById('selection-area').style.display = "block";
+    populateSongSelect(); updateSelectorAlert();
+}
+
+function setFirstSelector(teamStr) {
+    currentSelectorTeam = teamStr;
+    let teamName = currentSelectorTeam === 'A' ? teamA_name : teamB_name;
+    showCustomAlert(`👉 手動設定\n\n最初の選曲権を\n【 ${teamName} 】\nに設定しました！`);
+    document.getElementById('cointoss-area').style.display = "none"; document.getElementById('selection-area').style.display = "block";
+    populateSongSelect(); updateSelectorAlert();
+}
+
+function updateSelectorAlert() {
+    const alertBox = document.getElementById('selector-alert');
+    if(currentSelectorTeam === 'A') {
+        alertBox.innerHTML = `👉 現在の選曲権: <span class="team-a-text">🟦 ${teamA_name}</span>`;
+        alertBox.style.borderColor = "var(--team-a-color)"; alertBox.style.color = "var(--team-a-color)"; alertBox.style.background = "rgba(52, 152, 219, 0.1)";
+    } else {
+        alertBox.innerHTML = `👉 現在の選曲権: <span class="team-b-text">🟥 ${teamB_name}</span>`;
+        alertBox.style.borderColor = "var(--team-b-color)"; alertBox.style.color = "var(--team-b-color)"; alertBox.style.background = "rgba(231, 76, 60, 0.1)";
+    }
+}
+
+function goToPhase2() {
+    const song = document.getElementById('select-song').value; const pA = document.getElementById('select-player-a').value; const pB = document.getElementById('select-player-b').value;
+    if(!song || !pA || !pB) { showCustomAlert("課題曲と両チームの選手をすべて選択してください。"); return; }
+    document.getElementById('modal-title').innerText = `第${currentActiveMatchId}試合 スコア入力`;
+    document.getElementById('display-song').innerText = `🎵 ${song}`;
+    document.getElementById('display-player-a').innerText = pA; document.getElementById('display-player-b').innerText = pB;
+    document.getElementById('phase1').style.display = "none"; document.getElementById('phase2').style.display = "block";
+}
+
+function backToPhase1() {
+    document.getElementById('modal-title').innerText = `第${currentActiveMatchId}試合 設定`;
+    document.getElementById('phase1').style.display = "block"; document.getElementById('phase2').style.display = "none";
+}
+
+function confirmMatch() {
+    const kaA = parseInt(document.getElementById('input-ka-a').value) || 0; const fukaA = parseInt(document.getElementById('input-fuka-a').value) || 0;
+    const kaB = parseInt(document.getElementById('input-ka-b').value) || 0; const fukaB = parseInt(document.getElementById('input-fuka-b').value) || 0;
+    const lossA = (kaA * 1) + (fukaA * 2); const lossB = (kaB * 1) + (fukaB * 2);
+
+    if(lossA === lossB) { 
+        showCustomAlert("同点です！サドンデス等の結果を加味してスコアを調整してください。"); 
+        return; 
+    }
+    document.getElementById('custom-confirm-overlay').style.display = 'flex';
+}
+
+function executeMatchResult() {
+    closeCustomConfirm();
+    const kaA = parseInt(document.getElementById('input-ka-a').value) || 0; const fukaA = parseInt(document.getElementById('input-fuka-a').value) || 0;
+    const kaB = parseInt(document.getElementById('input-ka-b').value) || 0; const fukaB = parseInt(document.getElementById('input-fuka-b').value) || 0;
+    const lossA = (kaA * 1) + (fukaA * 2); const lossB = (kaB * 1) + (fukaB * 2);
+
+    let m = matches[currentActiveMatchId - 1];
+    m.song = document.getElementById('select-song').value;
+    m.playerA = document.getElementById('select-player-a').value; m.playerB = document.getElementById('select-player-b').value;
+    m.selectorTeam = currentSelectorTeam;
+    m.scoreA = { ka: kaA, fuka: fukaA, loss: lossA }; m.scoreB = { ka: kaB, fuka: fukaB, loss: lossB };
+    m.winner = lossA < lossB ? 'A' : 'B';
+    m.isCompleted = true;
+
+    let winnerTeamName = m.winner === 'A' ? teamA_name : teamB_name;
+    let loserTeamName = m.winner === 'A' ? teamB_name : teamA_name;
+    let winClass = m.winner === 'A' ? 'winner-a' : 'winner-b';
+
+    currentSelectorTeam = m.winner === 'A' ? 'B' : 'A';
+    closeModal(); renderDashboard();
+
+    const overlay = document.getElementById('match-result-overlay');
+    document.getElementById('result-match-title').innerText = `第${m.id}試合 終了！`;
+    const winnerText = document.getElementById('result-winner-name');
+    winnerText.innerText = winnerTeamName;
+    winnerText.className = `winner-announce-text ${winClass}`;
+    
+    winnerText.style.animation = 'none'; winnerText.offsetHeight;
+    winnerText.style.animation = 'resultZoom 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards';
+
+    document.getElementById('result-next-selector').innerText = `👉 次の選曲権: ${loserTeamName}`;
+    overlay.style.display = 'flex';
+    
+    confetti({ particleCount: 150, spread: 80, origin: { y: 0.5 }, zIndex: 4000 });
+    setTimeout(() => confetti({ particleCount: 150, spread: 120, origin: { y: 0.6 }, zIndex: 4000 }), 400);
+    setTimeout(() => confetti({ particleCount: 150, spread: 140, origin: { y: 0.4 }, zIndex: 4000 }), 800);
+}
+
+function closeMatchResult() { document.getElementById('match-result-overlay').style.display = 'none'; }
+</script>
+</body>
+</html>
